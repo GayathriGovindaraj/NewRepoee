@@ -1,0 +1,229 @@
+﻿@section metatags{
+    <meta name="title" content="Progress Telerik UI for ASP.NET MVC Bar Chart and Pie Chart | Olympic Games Sample App" />
+    <meta name="description" content="See the power of the client-side rendering Progress Telerik UI for ASP.NET MVC Chart offers. You also get client-side events and improved user interactions." />
+}
+<h2>Medals by Sport</h2>
+
+<p class="description">
+    Check the disciplines your country excelled at in a specific Olympic year.<br />
+    See the overall number of medals per sport in the bar chart and click on the bars to get a breakdown of the type of medals in the pie chart.
+</p>
+<form id="myform">
+    <div class="box configPanel">
+        @(Html.Kendo().DropDownList()
+        .Name("DropDownListGames")
+        .DataTextField("name")
+        .DataValueField("id")
+        .HtmlAttributes(new { style = "width:200px;" })
+        .Filter("contains")
+        .Events(events => events
+            .DataBound("dropDownListGamesDataBound"))
+        .DataSource(source => source
+            .Read(read => read.Url("api/games"))
+            .Custom().Sort(s => s.Add("name").Descending())
+        )
+        )
+
+        @(Html.Kendo().DropDownList()
+        .Name("DropDownListCountries")
+        .DataTextField("name")
+        .DataValueField("id")
+        .HtmlAttributes(new { style = "width:200px;", required = "required" })
+        .Filter("contains")
+        .OptionLabel("Select a Country")
+        .Events(events => events
+            .DataBound("dropDownListCountriesDataBound"))
+        .TemplateId("CountriesItemTemplate")
+        .DataSource(source => source
+            .Read(read => read
+                .Url("api/countries?flag=true")
+                .Data("filterCountries")
+             )
+            .Custom().Sort(s => s.Add("name").Ascending())
+            .ServerFiltering(true)
+        )
+        .AutoBind(false)
+        .CascadeFrom("DropDownListGames")
+        )
+
+        @(Html.Kendo().DropDownList()
+        .Name("CountriesCount")
+        .DataTextField("Text")
+        .DataValueField("Value")
+        .BindTo(new List<SelectListItem>() {
+            new SelectListItem() {
+            Text = "Top 3", Value = "3"
+            },
+            new SelectListItem() {
+            Text = "Top 5", Value = "5", Selected = true
+            },
+            new SelectListItem() {
+            Text = "Top 10", Value = "10"
+            },
+            new SelectListItem() {
+            Text = "Top 20", Value = "20"
+            }
+        })
+        .HtmlAttributes(new { style = "width:200px;" })
+        .Filter("contains")
+        )
+
+        @(Html.Kendo().Button()
+        .Name("ConfigureButton")
+        .Content("Update chart")
+        .HtmlAttributes(new { onclick = "changeChartsDs();return false;", @class = "bySportButtonClass" })
+        )
+    </div>
+    <div class="box" style="width: 744px; float: left;">
+        <h3 class="redTitle">
+            Medals By Sport
+        </h3>
+        @(Html.Kendo().Chart<OlympicGames.Models.MedalsBySport>()
+        .Name("MedalsBySportsChart")
+        .AutoBind(false)
+        .Legend(legend => legend
+            .Visible(false)
+        )
+        .ChartArea(chartArea => chartArea
+            .Background("transparent")
+        )
+        .Series(series =>
+        {
+            series.Bar(model => model.Medals);
+        })
+        .ValueAxis(axis => axis
+            .Numeric()
+            .MinorGridLines(lines => lines.Visible(true))
+         )
+        .CategoryAxis(axis => axis
+            .Categories(c => c.Sport)
+            .MinorGridLines(lines => lines.Visible(true))
+        )
+        .DataSource(dataSource => dataSource
+            .WebApi()
+            .Read(read => read
+                .Type(HttpVerbs.Get)
+                .Data("getColumnsMedalData")
+                .Url("api/TopSportsMedals/GetTopSportsMedals")
+                )
+                .Events(ev => ev.RequestEnd("medalsBySportRequestEnd"))
+        )
+        )
+    </div>
+    <div class="box" style="width: 356px; float: right;">
+        <h3 class="greenTitle">
+            Medal Type
+        </h3>
+        @(Html.Kendo().Chart<OlympicGames.Models.MedalsByType>()
+        .Name("MedalTypesChart")
+        .AutoBind(false)
+        .Series(series => series
+            .Pie(model => model.Medals, model => model.Type, model => model.Color)
+            .Labels(labels => labels.Visible(true))
+        )
+        .DataSource(dataSource => dataSource
+            .WebApi()
+            .Read(read => read
+                .Type(HttpVerbs.Get)
+                .Data("getPieMedalsData")
+                .Url("api/SportMedalsByCountry/GetSportMedalsByCountry")
+            )
+        )
+        .Tooltip(tooltip => tooltip.Visible(false))
+        .Legend(legend => legend.Position(ChartLegendPosition.Bottom))
+        )
+    </div>
+    <br style="clear: both;" />
+</form>
+<script id="CountriesItemTemplate" type="text/x-kendo-template">
+    @*remove all empty spaces, dots and content between parentheses for css class*@
+    <span class='countryFlag #= data.name.toLowerCase().replace(/ *\([^)]*\) */g, "").replace(/\./g, "").split(' ').join("_") #'></span>#= data.name #
+</script>
+
+<script>
+  //  $(document).ready(function () {
+        $("#myform").kendoValidator();
+ //   })
+
+
+    function dropDownListGamesDataBound(e) {
+        e.sender.unbind("dataBound");
+        e.sender.dataSource.add({
+            name: "All olympics",
+            id: "0"
+        });
+        e.sender.select(0);
+    }
+
+    var initialLoad = true;
+
+    function dropDownListCountriesDataBound(e) {
+        if (initialLoad) {
+            e.sender.select(function (dataitem) {
+                return dataitem.name === "Bulgaria";
+            });
+
+            if (e.sender.selectedIndex == -1) {
+                e.sender.select(0);
+            }
+
+            changeChartsDs();
+            initialLoad = false;
+        }
+        else {
+            if (e.sender.selectedIndex == -1) {
+                e.sender.select(0);
+            }
+        }
+
+    }
+
+    function changeChartsDs() {
+        var validator = $("#myform").kendoValidator().data("kendoValidator");     
+        validator.validate();
+        if (validator.validate() !== false) {
+            $("#MedalsBySportsChart").data("kendoChart").dataSource.read();
+        }
+    }
+
+    var sportName;
+
+    function medalsBySportRequestEnd(e) {
+        if (e.response[0] && e.response[0].Sport) {
+            sportName = e.response[0].Sport;
+            var medalsTypesChart = $("#MedalTypesChart").data("kendoChart");
+            medalsTypesChart.dataSource.read();
+            medalsTypesChart.setOptions({ title: { text: sportName + " medals" } });
+        }
+    }
+
+    function filterCountries() {
+        return {
+            gameId: $("#DropDownListGames").val(),
+            countriesFilter: $("#DropDownListCountries").data("kendoDropDownList").filterInput.val()
+        };
+    }
+
+    function getColumnsMedalData() {
+        var gameId = $("#DropDownListGames").data("kendoDropDownList").value();
+        var countryId = $("#DropDownListCountries").data("kendoDropDownList").value();
+        var limit = $("#CountriesCount").data("kendoDropDownList").value();
+
+        return {
+            gameId: gameId,
+            countryId: countryId,
+            limit: limit
+        }
+    }
+
+    function getPieMedalsData() {
+        var gameId = $("#DropDownListGames").data("kendoDropDownList").value();
+        var countryId = $("#DropDownListCountries").data("kendoDropDownList").value();
+
+        return {
+            gameId: gameId,
+            countryId: countryId,
+            sportName: sportName
+        }
+    }
+</script>

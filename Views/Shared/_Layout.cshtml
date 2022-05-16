@@ -1,0 +1,85 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    @RenderSection("metatags", required: true)
+
+    <link rel="shortcut icon" href="~/Content/favicon.ico" />
+    <title>@ViewBag.Title</title>
+    <link rel="stylesheet" href="https://kendo.cdn.telerik.com/2022.2.510/styles/kendo.classic-opal.min.css" />
+    @Styles.Render("~/Content/css")
+
+    <script src="https://kendo.cdn.telerik.com/2022.2.510/js/jquery.min.js"></script>
+    <script src="https://kendo.cdn.telerik.com/2022.2.510/js/kendo.all.min.js"></script>
+    <script src="https://kendo.cdn.telerik.com/2022.2.510/js/kendo.aspnetmvc.min.js"></script>
+	<script src="https://kendo.cdn.telerik.com/2022.2.510/js/jszip.min.js"></script>
+</head>
+<body>
+    <!-- Google Tag Manager -->
+    <noscript>
+        <iframe src="//www.googletagmanager.com/ns.html?id=GTM-6X92" height="0" width="0" style="display: none; visibility: hidden"></iframe>
+    </noscript>
+    <script>
+    (function (w, d, s, l, i) {
+        w[l] = w[l] || [];
+        w[l].push({ 'gtm.start': new Date().getTime(), event: 'gtm.js' });
+        var f = d.getElementsByTagName(s)[0], j = d.createElement(s), dl = l != 'dataLayer' ? '&l=' + l : '';
+        j.async = true;
+        j.src = '//www.googletagmanager.com/gtm.js?id=' + i + dl;
+        f.parentNode.insertBefore(j, f);
+    })(window, document, 'script', 'dataLayer', 'GTM-6X92');</script>
+    <!-- End Google Tag Manager -->
+
+
+    <div id="header">
+        <div class="topNav">
+            <div class="nav">
+                <div class="t-top-logo">
+                    <img src="~/Content/images/telerik-top-logo.png" alt="" />
+                </div>
+                <a href="@Url.Action("About", "Home")">About this sample app</a>
+                <a href="https://github.com/telerik/olympic-games-sample-app-mvc/"  target="_blank">Download source code</a>
+            </div>
+        </div>
+        <div class="headerCont">
+            @(Html.Kendo().Menu()
+                .Name("Navigation")
+                .HtmlAttributes(new { @class = "navigation-memu" })
+                .Items(items =>
+                {
+                    items.Add().Text("Medals by Country").Action("Medals_by_Country", "Home");
+                    items.Add().Text("Medals by Sport").Action("Medals_by_Sport", "Home");
+                    items.Add().Text("Top Results by Sport").Action("Top_Results_by_Sport", "Home");
+                    items.Add().Text("Athlete Comparison").Action("Athlete_Comparison", "Home");
+                })
+            )
+            <div class="hgroup">
+                <h1><a href="@Url.Action("Medals_by_Country", "Home")"><img src="~/Content/images/logo_main.png" alt="Olympic Games" /></a></h1>
+            </div>
+        </div>
+    </div>
+    <div id="content">
+        <div class="wrapper">
+            @RenderBody()
+            <p class="about">
+                Sample ASP.NET MVC application built with <a href="http://www.telerik.com/products/aspnet-mvc">Progress&reg; Telerik UI&reg; for ASP.NET MVC</a>
+            </p>
+        </div>
+    </div>
+    <div id="footer">
+        <div class="section">
+            <div class="nav">
+                <a href="http://www.telerik.com/company/contact-us.aspx">Contact Us</a>
+                <a href="http://www.telerik.com/company/terms.aspx">Terms of Use</a>
+                <a href="http://www.telerik.com/company/privacy-policy.aspx">Privacy Policy</a>
+            </div>
+            <span class="copyright">
+                <p>Copyright  &copy; @DateTime.Now.Year.ToString(), Progress Software Corporation and/or its subsidiaries or affiliates. All Rights Reserved.</p>
+            </span>
+        </div>
+    </div>
+
+    @RenderSection("scripts", required: false)
+</body>
+</html>

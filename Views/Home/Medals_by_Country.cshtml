@@ -1,0 +1,280 @@
+﻿@section metatags{
+    <meta name="title" content="Progress Telerik UI for ASP.NET MVC PivotGrid and Chart | Olympic Games Sample App" />
+    <meta name="description" content="Take a look at how easy it is to implement Progress Telerik UI for ASP.NET MVC Chart and PivotGrid wrapper to display and manage data." />
+}
+
+<h2>Medals by Country</h2>
+
+<p class="description">
+    Wonder how many Olympic medals your country has won throughout the years and how the achievements stack against your neighbors’?<br />
+    Select the countries and years of interest below to get the info in an easy-to-understand line Chart and a PivotGrid allowing you to get in-depth details with just a few clicks.
+</p>
+<div class="box">
+    <h3 class="blueTitle">
+        Countries
+    </h3>
+
+    @(Html.Kendo().MultiSelect()
+        .Name("SelectedCountries")
+        .Placeholder("Select maximum 10 countries ...")
+        .DataSource(datasource => datasource
+            .Read(read => read.Url("api/countries"))
+        )
+        .DataTextField("name")
+        .DataValueField("id")
+        .ItemTemplateId("SelectedCountriesItemTemplate")
+        .TagTemplateId("SelectedCountriesItemTemplate")
+        .Value(new int[] { 205, 72, 76, 204 })
+        .Events(events => events.Change("onChange").Select("onSelect").Open("onOpen"))
+    )
+
+    <script id="SelectedCountriesItemTemplate" type="text/x-kendo-template">
+        @*remove all empty spaces, dots and content between parentheses for css class*@
+        <span class='countryFlag #= data.name.toLowerCase().replace(/ *\([^)]*\) */g, "").replace(/\./g, "").split(' ').join("_") #'></span>#= data.name #
+    </script>
+</div>
+<div class="box">
+    <h3 class="redTitle">
+        Olympic Years
+    </h3>
+
+    @(Html.Kendo().RangeSlider()
+        .Name("YearsSlider")
+        .HtmlAttributes(new { style = "width: 100%" })
+        .Min(1896)
+        .Max(2008)
+        .SmallStep(4)
+        .LargeStep(4)
+        .Tooltip(tooltip => tooltip.Format("{0}"))
+        .Events(ev => ev.Change("onChange"))
+    )
+</div>
+<div class="box">
+    <h3 class="greenTitle">
+        Medals - Overview
+    </h3>
+    @(Html.Kendo().Chart<OlympicGames.Models.MedalsByCountry>()
+        .Name("HtmlChartStats")
+        .ChartArea(chartArea => chartArea.Background("none"))
+        .Series(series => series
+            .Line(model => model.Medals, categoryExpression: model => model.Year)
+            .Name("#= group.value #")
+        )
+        .CategoryAxis(axis => axis
+            .MinorGridLines(grid => grid.Visible(true))
+        )
+        .DataSource(dataSource => dataSource
+            .WebApi()
+            .Read(read => read
+                .Type(HttpVerbs.Get)
+                .Data("getData")
+                .Url("api/results/GetMedalsByCountry")
+            )
+            .Group(group => group.Add(model => model.Country))
+            .Sort(sort => sort.Add(model => model.Year))
+        )
+        .Tooltip(tooltip => tooltip.Visible(true))
+        .Events(events => events.DataBound("onDataBound"))
+    )
+
+
+</div>
+<div class="box">
+    <h3 class="orangeTitle">
+        Medals - Details
+    </h3>
+
+    @(Html.Kendo().Button()
+        .Name("ButtonShowFilterWindow")
+        .Content("Show filter dialog")
+        .HtmlAttributes(new { value = "show" })
+        .Events(events => events.Click("toggleFilterWindow"))
+    )
+
+    @(Html.Kendo().Window()
+        .Name("WindowSports")
+        .Title("Filter sports in PivotGrid")
+        .Visible(false)
+        .Actions(action => action.Clear().Maximize().Close())
+        .Draggable()
+        .Content(@<text>
+            @(Html.Kendo().Button()
+                        .Name("ButtonUpdate")
+                        .Content("Update PivotGrid")
+                        .Events(events => events.Click("reloadPivotGrid"))
+            )
+
+            @(Html.Kendo().Button()
+                        .Name("ButtonClear")
+                        .Content("Reset")
+                        .Events(events => events.Click("resetSports"))
+            )
+            <br /><br />
+            @(Html.Kendo().ListView<OlympicGames.Models.sport>()
+                        .Name("ListViewSports")
+                        .HtmlAttributes(new { @class = "by-country listview-sports" })
+                        .TagName("div")
+                        .DataSource(dataSource => dataSource
+                            .Custom()
+                            .Transport(transport => transport
+                                .Read(read => read.Url("api/sports").Type(HttpVerbs.Get))
+                            )
+                        )
+                        .ClientTemplateId("ListViewItemTemplate")
+            )
+        </text>)
+             .Events(events => events.Open("onWindowOpen").Close("onWindowClose"))
+    )
+
+    <script type="text/x-kendo-tmpl" id="ListViewItemTemplate">
+        <div>
+            @(Html.Kendo().CheckBox()
+                .Name("sportId_#=id#")
+                .Label("#=name#")
+                .ToClientTemplate()
+            )
+        </div>
+    </script>
+
+    <br />
+    <br />
+    @(Html.Kendo().PivotGrid<OlympicGames.Models.PivotGridResultItem>()
+        .Name("PivotGridStats")
+        .Height(400)
+        .DataSource(dataSource => dataSource
+            .Ajax()
+            .Transport(transport => transport
+                .Read(read => read
+                    .Type(HttpVerbs.Get)
+                    .Url("api/results/GetPivotGridResultItems")
+                    .Data("getData")
+                )
+            )
+            .Schema(schema => schema
+                .Cube(cube => cube
+                    .Dimensions(dimensions =>
+                    {
+                        dimensions.Add(model => model.CountryName).Caption("Country Name");
+                        dimensions.Add(model => model.MedalType).Caption("Medal");
+                        dimensions.Add(model => model.OlympicsGame).Caption("Olympic Game");
+                        dimensions.Add(model => model.OlympicsYear).Caption("Olympic Year");
+                        dimensions.Add(model => model.SportName).Caption("Sport Name");
+                    })
+                    .Measures(measures => measures.Add("MedalsCount").Field(model => model.MedalType).AggregateName("count").Caption("Number of medals"))
+                )
+            )
+            .Columns(cols =>
+            {
+                cols.Add("OlympicsGame").Expand(true);
+            })
+            .Rows(rows =>
+            {
+                rows.Add("CountryName").Expand(true);
+                rows.Add("MedalType").Expand(true);
+            })
+            .Measures(measures => measures.Values("MedalsCount"))
+        )
+        .Reorderable(false)
+    )
+</div>
+
+
+@section scripts{
+    <script>
+        //restrict selection to maximum 10 countries for the MultiSelect
+        function onSelect(e) {
+            if (e.sender.value().length > 9) {
+                e.preventDefault()
+                alert("Maximum number of selected countries is 10");
+            }
+        }
+
+        // workaround for restricting the selection, due to 3592 and 3589 issues in https://github.com/telerik/kendo-ui-core/
+        function onOpen(e) {
+            var multiSelect = e.sender;
+            $(e.sender.input).on("keydown", function (z) {
+                //prevent the selection with Ctrl + A
+                if (z.ctrlKey && z.which == 65) {
+                    z.stopImmediatePropagation()
+                    multiSelect.value([205, 72, 76, 204])
+                }
+                else
+                    stopSelection(z, multiSelect);
+            })
+        }
+
+        function stopSelection(event, widget) {
+
+            if (widget.value().length > 9) {
+                event.stopImmediatePropagation()
+                alert("Maximum number of selected countries is 10");
+            }
+        }
+
+        function onDataBound(e) {
+            var axis = e.sender.options.categoryAxis;
+            axis.categories = axis.categories.sort();
+        }
+
+        function onChange(e) {
+            $("#HtmlChartStats").data("kendoChart").dataSource.read();
+            reloadPivotGrid();
+        }
+
+        function reloadPivotGrid() {
+            var pivotGrid = $("#PivotGridStats").data("kendoPivotGrid");
+            var pivotDataSourceOp = pivotGrid.dataSource.options;
+
+            pivotGrid.setDataSource(new kendo.data.PivotDataSource(pivotDataSourceOp));
+        }
+
+        function resetSports() {
+            $("#ListViewSports input:checkbox:checked")
+                .each(function (i, elm) {
+                    $(elm).attr("checked", false);
+                });
+
+            reloadPivotGrid();
+        }
+
+        function onWindowOpen() {
+            $("#ButtonShowFilterWindow")
+                .val("hide")
+                .text("Hide filter dialog")
+        }
+
+        function onWindowClose() {
+            $("#ButtonShowFilterWindow")
+                .val("show")
+                .text("Show filter dialog")
+        }
+
+        function toggleFilterWindow(ev) {
+            var toShow = ev.sender.element.val() == "show";
+            var windowSports = $("#WindowSports").data("kendoWindow");
+
+            if (toShow) {
+                windowSports.open();
+            } else {
+                windowSports.close();
+            }
+        }
+
+        function getData() {
+            var countryIds = $("#SelectedCountries").data("kendoMultiSelect").value();
+            var rangeSlider = $("#YearsSlider").data("kendoRangeSlider");
+            var rangeDates = rangeSlider.value();
+            var sportIds = $("#ListViewSports input:checkbox:checked")
+                .map(function (i, elm) {
+                    return $(this).attr("id").split("_")[1];
+                }).get();
+
+            return {
+                countryIds: countryIds,
+                sportIds: sportIds,
+                startYear: rangeDates[0],
+                endYear: rangeDates[1]
+            }
+        }
+    </script>
+}
